@@ -13,17 +13,31 @@ pre = QuantumCircuit(q, c)
 pre.h(q)
 pre.barrier()
 
+meas_x = QuantumCircuit(q, c)
+meas_x.barrier()
+meas_x.h(q)
+meas_x.measure(q, c)
+
+meas_y = QuantumCircuit(q, c)
+meas_y.barrier()
+meas_y.s(q).inverse()
+meas_y.h(q)
+meas_y.measure(q, c)
+
 meas_z = QuantumCircuit(q, c)
 meas_z.barrier()
-meas_z.h(q)
 meas_z.measure(q, c)
 
 exp_vector = range(0, 3)
+bloch_vector = ['x', 'y', 'z']
 circuits = []
+
 for exp_index in exp_vector:
     middle = QuantumCircuit(q, c)
     phase = 2 * np.pi * exp_index / (len(exp_vector) - 1)
     middle.rz(phase, q)
+    circuits.append(pre + middle + meas_x)
+    circuits.append(pre + middle + meas_y)
     circuits.append(pre + middle + meas_z)
 
 # Execute the circuit
@@ -34,19 +48,20 @@ result = job.result()
 # Plot the result
 for exp_index in exp_vector:
     bloch = [0, 0, 0]
-    qc = circuits[exp_index]
-    plot_circuit(qc)
-    data = result.get_counts(qc)
-    try:
-        p0 = data['0'] / 1024.0
-    except KeyError:
-        p0 = 0.0
-    try:
-        p1 = data['1'] / 1024.0
-    except KeyError:
-        p1 = 0.0
-    print("Probabilities: {'0' : %s, '1' : %s}" % (p0, p1))
-    bloch[2] = (p0 - p1)
+    for bloch_index in range(len(bloch_vector)):
+        qc = circuits[3 * exp_index + bloch_index]
+        plot_circuit(qc)
+        data = result.get_counts(qc)
+        print(data)
+        try:
+            p0 = data['0'] / 1024.0
+        except KeyError:
+            p0 = 0
+        try:
+            p1 = data['1'] / 1024.0
+        except KeyError:
+            p1 = 0
+        bloch[bloch_index] = p0 - p1
     print("bloch vector (for phase : %s) :: %s" % (2 * np.pi * exp_index / (len(exp_vector) - 1) , bloch))
     plot_bloch_vector(bloch)
 
